@@ -21,9 +21,11 @@ else()
   message("-- So add the glog from lib/")
   add_subdirectory("lib/glog")
 endif()
-
-link_libraries(${GTEST_BOTH_LIBRARIES} gtest glog::glog)
-
+if (DEFINED GTEST_BOTH_LIBRARIES)
+  link_libraries(${GTEST_BOTH_LIBRARIES} glog::glog)
+else()
+  link_libraries(gtest glog::glog)
+endif()
 enable_testing()
 
 add_executable(ss_test src/ss_test.cc src/ss.cc)
