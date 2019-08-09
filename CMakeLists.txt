@@ -1,14 +1,12 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 project(shadesocks CXX)
-
-add_definitions(-std=c++17)
+set (CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-g -O2")
 
 add_subdirectory("lib/googletest")
-
-find_package(gtest)
-find_package(glog 0.4.0 REQUIRED)
+add_subdirectory("lib/glog")
+# find_package(glog 0.4.0 REQUIRED)
 
 link_libraries(gtest glog::glog)
 
