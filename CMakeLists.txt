@@ -6,9 +6,11 @@ add_definitions(-std=c++17)
 set(CMAKE_CXX_FLAGS "-g -O2")
 
 add_subdirectory("lib/googletest")
-add_subdirectory("lib/gflags")
 
-link_libraries(gtest gflags)
+find_package(gtest)
+find_package(glog 0.4.0 REQUIRED)
+
+link_libraries(gtest glog::glog)
 
 enable_testing()
 
