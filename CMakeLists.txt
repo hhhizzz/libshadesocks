@@ -4,7 +4,7 @@ project(shadesocks CXX)
 set (CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-DNDEBUG -g2 -O2")
 
-add_subdirectory("lib/cryptopp")
+add_subdirectory("lib/cryptopp_cmake")
 
 find_package(GTest)
 if (${GTEST_FOUND})
