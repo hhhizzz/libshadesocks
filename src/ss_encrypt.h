@@ -29,8 +29,8 @@ namespace shadesocks {
 class ShadeEncrypt {
  private:
  public:
-  static string HexToString(const byte* input, size_t size);
-  static SecByteBlock StringToHex(const string& input, size_t size);
+  static string HexToString(const byte* input, size_t size = -1);
+  static SecByteBlock StringToHex(const string& input, size_t size = -1);
 };
 }  // namespace shadesocks
 #endif
