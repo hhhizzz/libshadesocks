@@ -1,7 +1,10 @@
 #ifndef SS_ENCRYPT_H__
 #define SS_ENCRYPT_H__
 
-#include <stdexcept>
+#include <glog/logging.h>
+
+#include <cryptlib.h>
+using CryptoPP::InvalidArgument;
 #include <string>
 using std::string;
 
@@ -25,12 +28,19 @@ using CryptoPP::StringSource;
 using CryptoPP::HexDecoder;
 using CryptoPP::HexEncoder;
 
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
+#include "md5.h"
+using CryptoPP::Weak::MD5;
+
 namespace shadesocks {
 class ShadeEncrypt {
  private:
  public:
-  static string HexToString(const byte* input, size_t size = -1);
+  static string HexToString(const SecByteBlock&);
   static SecByteBlock StringToHex(const string& input, size_t size = -1);
+  //Returns md5 padding password in bytes
+  static SecByteBlock PasswordToKey(const string& password, size_t key_length);
+  static SecByteBlock Md5Sum(const SecByteBlock&);
 };
 }  // namespace shadesocks
 #endif
