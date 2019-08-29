@@ -1,7 +1,7 @@
 #include "ss_encrypt.h"
 
 namespace shadesocks {
-string ShadeEncrypt::HexToString(const SecByteBlock& input) {
+string Util::HexToString(const SecByteBlock& input) {
   string encoded;
   HexEncoder encoder;
 
@@ -16,7 +16,7 @@ string ShadeEncrypt::HexToString(const SecByteBlock& input) {
   return encoded;
 }
 
-SecByteBlock ShadeEncrypt::StringToHex(const string& input) {
+SecByteBlock Util::StringToHex(const string& input) {
   SecByteBlock decoded;
   HexDecoder decoder;
 
@@ -31,7 +31,7 @@ SecByteBlock ShadeEncrypt::StringToHex(const string& input) {
   return decoded;
 }
 
-SecByteBlock ShadeEncrypt::Md5Sum(const SecByteBlock& input) {
+SecByteBlock Util::Md5Sum(const SecByteBlock& input) {
   MD5 hash;
   byte* decoded;
 
@@ -42,8 +42,7 @@ SecByteBlock ShadeEncrypt::Md5Sum(const SecByteBlock& input) {
   return SecByteBlock(decoded, hash.DigestSize());
 }
 
-SecByteBlock ShadeEncrypt::PasswordToKey(const string& password,
-                                         size_t key_length) {
+SecByteBlock Util::PasswordToKey(const string& password, size_t key_length) {
   MD5 hash;
   SecByteBlock decoded;
   const int md5_length = 16;
@@ -77,28 +76,6 @@ SecByteBlock ShadeEncrypt::PasswordToKey(const string& password,
   }
   result.resize(key_length);
   return result;
-}
-
-SecByteBlock ShadeEncryptCFB::encrypt(const string& input) {
-  SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
-  return this->encrypt(bytes);
-}
-
-SecByteBlock ShadeEncryptCFB::encrypt(const SecByteBlock& input) {
-  SecByteBlock output(input.size());
-  this->encryption.ProcessData(output, input, input.size());
-  return output;
-}
-
-SecByteBlock ShadeEncryptCFB::decrypt(const string& input) {
-  SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
-  return this->decrypt(bytes);
-}
-
-SecByteBlock ShadeEncryptCFB::decrypt(const SecByteBlock& input) {
-  SecByteBlock output(input.size());
-  this->decryption.ProcessData(output, input, input.size());
-  return output;
 }
 
 }  // namespace shadesocks

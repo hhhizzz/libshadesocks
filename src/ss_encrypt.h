@@ -33,31 +33,50 @@ using CryptoPP::HexEncoder;
 using CryptoPP::Weak::MD5;
 
 namespace shadesocks {
-class ShadeEncrypt {
+class Util {
  public:
   static string HexToString(const SecByteBlock&);
   static SecByteBlock StringToHex(const string& input);
   // Returns md5 padding password in bytes
   static SecByteBlock PasswordToKey(const string& password, size_t key_length);
   static SecByteBlock Md5Sum(const SecByteBlock&);
+};
 
+class Encrypt {
+ public:
   virtual SecByteBlock encrypt(const SecByteBlock&) = 0;
   virtual SecByteBlock decrypt(const SecByteBlock&) = 0;
 };
 
-class ShadeEncryptCFB : ShadeEncrypt {
+template <typename EncryptMode>
+class ShadeEncrypt : Encrypt {
  private:
-  CFB_Mode<AES>::Encryption encryption;
-  CFB_Mode<AES>::Decryption decryption;
+  typename EncryptMode::Encryption encryption;
+  typename EncryptMode::Decryption decryption;
 
  public:
-  ShadeEncryptCFB(SecByteBlock key, SecByteBlock iv)
+  ShadeEncrypt(SecByteBlock key, SecByteBlock iv)
       : encryption(key, key.size(), iv), decryption(key, key.size(), iv) {}
-  SecByteBlock encrypt(const string&);
-  SecByteBlock encrypt(const SecByteBlock&);
-  
-  SecByteBlock decrypt(const string&);
-  SecByteBlock decrypt(const SecByteBlock&);
+
+  SecByteBlock encrypt(const string& input) {
+    SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
+    return this->encrypt(bytes);
+  }
+  SecByteBlock encrypt(const SecByteBlock& input) {
+    SecByteBlock output(input.size());
+    this->encryption.ProcessData(output, input, input.size());
+    return output;
+  }
+
+  SecByteBlock decrypt(const string& input) {
+    SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
+    return this->decrypt(bytes);
+  }
+  SecByteBlock decrypt(const SecByteBlock& input) {
+    SecByteBlock output(input.size());
+    this->decryption.ProcessData(output, input, input.size());
+    return output;
+  }
 };
 }  // namespace shadesocks
 #endif
