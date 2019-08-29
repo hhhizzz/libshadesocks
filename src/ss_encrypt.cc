@@ -78,4 +78,55 @@ SecByteBlock Util::PasswordToKey(const string& password, size_t key_length) {
   return result;
 }
 
+void checkLengthValid(const string& method, SecByteBlock& key,
+                      SecByteBlock& iv) {
+  auto found = cipher_map.find(method);
+  if (found == cipher_map.end()) {
+    throw InvalidArgument("method name " + method + " is not right");
+  }
+  if (key.size() != found->second.key_length) {
+    throw InvalidArgument("key size is not right, expect " +
+                          std::to_string(found->second.key_length) +
+                          ", actual " + std::to_string(key.size()));
+  }
+  if (iv.size() != found->second.iv_length) {
+    throw InvalidArgument("iv size is not right, expect " +
+                          std::to_string(found->second.iv_length) +
+                          ", actual " + std::to_string(iv.size()));
+  }
+}
+
+std::unique_ptr<Cipher> Util::getEncryption(const string& method) {
+  LOG(INFO) << "the key size is 0, so generate the key";
+  int key_length = cipher_map.find(method)->second.key_length;
+  int iv_length = cipher_map.find(method)->second.iv_length;
+  SecByteBlock key = Util::RandomBlock(key_length);
+  SecByteBlock iv = Util::RandomBlock(iv_length);
+  return Util::getEncryption(method, key, iv);
+}
+
+std::unique_ptr<Cipher> Util::getEncryption(const string& method,
+                                            SecByteBlock& key,
+                                            SecByteBlock& iv) {
+  std::unique_ptr<shadesocks::Cipher> encryption;
+
+  checkLengthValid(method, key, iv);
+
+  if (method.find("cfb") != std::string::npos) {
+    encryption.reset(new shadesocks::ShadeCipher<CFB_Mode<AES>>(key, iv));
+  } else if (method.find("ctr") != std::string::npos) {
+    encryption.reset(new shadesocks::ShadeCipher<CTR_Mode<AES>>(key, iv));
+  } else {
+    throw InvalidArgument("cannot encrypt by method: " + method);
+  }
+  return encryption;
+}
+
+SecByteBlock Util::RandomBlock(int size) {
+  AutoSeededRandomPool rnd;
+  SecByteBlock key(0x00, size);  // length is 16
+  rnd.GenerateBlock(key, key.size());
+  return key;
+}
+
 }  // namespace shadesocks

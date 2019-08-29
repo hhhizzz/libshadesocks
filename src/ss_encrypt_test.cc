@@ -53,18 +53,13 @@ TEST(EncryptTest, HandlePassword) {
   }
 }
 
-TEST(EncryptTest, HandleAESCFB) {
-  AutoSeededRandomPool rnd;
-
-  // Generate a random key
-  SecByteBlock key(0x00, AES::DEFAULT_KEYLENGTH);  // length is 16
-  rnd.GenerateBlock(key, key.size());
-
-  // Generate a random IV
-  SecByteBlock iv(AES::BLOCKSIZE);  // length is 16
-  rnd.GenerateBlock(iv, iv.size());
+void test_encrypt(const string& method) {
+  std::unique_ptr<shadesocks::Cipher> cipher =
+      shadesocks::Util::getEncryption(method);
 
   string encoded;
+  SecByteBlock key = cipher->GetKey();
+  SecByteBlock iv = cipher->GetIv();
   encoded = shadesocks::Util::HexToString(key);
   cout << "the key is : " + encoded << endl;
   encoded = shadesocks::Util::HexToString(iv);
@@ -75,14 +70,14 @@ TEST(EncryptTest, HandleAESCFB) {
 
   //////////////////////////////////////////////////////////////////////////
   // Encrypt
-  shadesocks::ShadeEncrypt<CFB_Mode<AES>> encrypt(key, iv);
-  auto encryptData = encrypt.encrypt(plain_text);
+
+  auto encryptData = cipher->encrypt(plain_text);
   cout << "encrypt byte is " << shadesocks::Util::HexToString(encryptData)
        << endl;
 
   //////////////////////////////////////////////////////////////////////////
   // Decrypt
-  auto decryptData = encrypt.decrypt(encryptData);
+  auto decryptData = cipher->decrypt(encryptData);
   cout << "decrypt byte is " << shadesocks::Util::HexToString(decryptData)
        << endl;
   cout << "decrypt text is "
@@ -92,6 +87,32 @@ TEST(EncryptTest, HandleAESCFB) {
   for (int i = 0; i < decryptData.size(); i++) {
     EXPECT_EQ(plain_text[i], decryptData[i]);
   }
+}
+
+TEST(EncryptTest, HandleAES) {
+  string method = "aes-128-cfb";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-192-cfb";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-256-cfb";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-128-ctr";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-192-ctr";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-256-ctr";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
 }
 
 int main(int argc, char** argv) {
