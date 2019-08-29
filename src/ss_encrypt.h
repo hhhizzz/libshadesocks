@@ -34,13 +34,30 @@ using CryptoPP::Weak::MD5;
 
 namespace shadesocks {
 class ShadeEncrypt {
- private:
  public:
   static string HexToString(const SecByteBlock&);
-  static SecByteBlock StringToHex(const string& input, size_t size = -1);
-  //Returns md5 padding password in bytes
+  static SecByteBlock StringToHex(const string& input);
+  // Returns md5 padding password in bytes
   static SecByteBlock PasswordToKey(const string& password, size_t key_length);
   static SecByteBlock Md5Sum(const SecByteBlock&);
+
+  virtual SecByteBlock encrypt(const SecByteBlock&) = 0;
+  virtual SecByteBlock decrypt(const SecByteBlock&) = 0;
+};
+
+class ShadeEncryptCFB : ShadeEncrypt {
+ private:
+  CFB_Mode<AES>::Encryption encryption;
+  CFB_Mode<AES>::Decryption decryption;
+
+ public:
+  ShadeEncryptCFB(SecByteBlock key, SecByteBlock iv)
+      : encryption(key, key.size(), iv), decryption(key, key.size(), iv) {}
+  SecByteBlock encrypt(const string&);
+  SecByteBlock encrypt(const SecByteBlock&);
+  
+  SecByteBlock decrypt(const string&);
+  SecByteBlock decrypt(const SecByteBlock&);
 };
 }  // namespace shadesocks
 #endif

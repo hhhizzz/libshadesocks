@@ -1,7 +1,6 @@
 #include "ss_encrypt.h"
 
 namespace shadesocks {
-// params: size the length of the bytes
 string ShadeEncrypt::HexToString(const SecByteBlock& input) {
   string encoded;
   HexEncoder encoder;
@@ -16,15 +15,12 @@ string ShadeEncrypt::HexToString(const SecByteBlock& input) {
 
   return encoded;
 }
-// params: size the length of the string, which half of the length of bytes
-SecByteBlock ShadeEncrypt::StringToHex(const string& input, size_t size) {
-  if (size < 0) {
-    size = input.size();
-  }
+
+SecByteBlock ShadeEncrypt::StringToHex(const string& input) {
   SecByteBlock decoded;
   HexDecoder decoder;
 
-  decoder.Put((byte*)input.data(), size);
+  decoder.Put((byte*)input.data(), input.size());
   decoder.MessageEnd();
 
   auto output_size = decoder.MaxRetrievable();
@@ -52,7 +48,7 @@ SecByteBlock ShadeEncrypt::PasswordToKey(const string& password,
   SecByteBlock decoded;
   const int md5_length = 16;
 
-  if(key_length % md5_length !=0){
+  if (key_length % md5_length != 0) {
     throw InvalidArgument("the length has to be interal times over 16");
   }
 
@@ -82,4 +78,27 @@ SecByteBlock ShadeEncrypt::PasswordToKey(const string& password,
   result.resize(key_length);
   return result;
 }
+
+SecByteBlock ShadeEncryptCFB::encrypt(const string& input) {
+  SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
+  return this->encrypt(bytes);
+}
+
+SecByteBlock ShadeEncryptCFB::encrypt(const SecByteBlock& input) {
+  SecByteBlock output(input.size());
+  this->encryption.ProcessData(output, input, input.size());
+  return output;
+}
+
+SecByteBlock ShadeEncryptCFB::decrypt(const string& input) {
+  SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
+  return this->decrypt(bytes);
+}
+
+SecByteBlock ShadeEncryptCFB::decrypt(const SecByteBlock& input) {
+  SecByteBlock output(input.size());
+  this->decryption.ProcessData(output, input, input.size());
+  return output;
+}
+
 }  // namespace shadesocks
