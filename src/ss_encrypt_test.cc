@@ -113,6 +113,18 @@ TEST(EncryptTest, HandleAES) {
   method = "aes-256-ctr";
   LOG(INFO) << "start to test method " + method << endl;
   test_encrypt(method);
+
+  method = "aes-128-gcm";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-192-gcm";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
+
+  method = "aes-256-gcm";
+  LOG(INFO) << "start to test method " + method << endl;
+  test_encrypt(method);
 }
 
 int main(int argc, char** argv) {

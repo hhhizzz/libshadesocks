@@ -16,6 +16,9 @@ using CryptoPP::AES;
 using CryptoPP::byte;
 using CryptoPP::SecByteBlock;
 
+#include <cryptopp/gcm.h>
+using CryptoPP::GCM;
+
 #include <modes.h>
 using CryptoPP::CFB_Mode;
 using CryptoPP::CTR_Mode;
@@ -43,7 +46,8 @@ const std::map<string, CipherInfo> cipher_map{
     {"aes-128-cfb", {16, 16}}, {"aes-192-cfb", {24, 16}},
     {"aes-256-cfb", {32, 16}}, {"aes-128-ctr", {16, 16}},
     {"aes-192-ctr", {24, 16}}, {"aes-256-ctr", {32, 16}},
-};
+    {"aes-128-gcm", {16, 16}}, {"aes-192-gcm", {24, 16}},
+    {"aes-256-gcm", {32, 16}}};
 
 class Cipher {
  public:
@@ -69,11 +73,9 @@ class ShadeCipher : public Cipher {
   SecByteBlock iv;
 
  public:
-  ShadeCipher(SecByteBlock& key, SecByteBlock& iv)
-      : encryption(key, key.size(), iv, iv.size()),
-        decryption(key, key.size(), iv, iv.size()),
-        key(key),
-        iv(iv) {}
+  ShadeCipher(SecByteBlock& key, SecByteBlock& iv) {
+    this->SetKeyWithIV(key, iv);
+  }
 
   void SetKeyWithIV(SecByteBlock& key, SecByteBlock& iv) {
     this->key = key;

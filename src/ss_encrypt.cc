@@ -116,6 +116,8 @@ std::unique_ptr<Cipher> Util::getEncryption(const string& method,
     encryption.reset(new shadesocks::ShadeCipher<CFB_Mode<AES>>(key, iv));
   } else if (method.find("ctr") != std::string::npos) {
     encryption.reset(new shadesocks::ShadeCipher<CTR_Mode<AES>>(key, iv));
+  } else if (method.find("gcm") != std::string::npos) {
+    encryption.reset(new shadesocks::ShadeCipher<GCM<AES>>(key, iv));
   } else {
     throw InvalidArgument("cannot encrypt by method: " + method);
   }
