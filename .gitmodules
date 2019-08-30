@@ -7,3 +7,6 @@
 [submodule "lib/cryptopp"]
 	path = lib/cryptopp
 	url = https://github.com/weidai11/cryptopp.git
+[submodule "lib/libuv"]
+	path = lib/libuv
+	url = https://github.com/libuv/libuv.git
