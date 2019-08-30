@@ -6,15 +6,17 @@ set(CMAKE_CXX_FLAGS "-DNDEBUG -g2 -O2")
 
 set(LINK_LIBRARIES)
 
-find_package(libuv)
-if (${libuv_FOUND})
-  message("Found libuv")
-  find_package(libuv REQUIRED)
+FIND_PATH(LIBUV_INCLUDE_DIR NAMES uv.h)
+FIND_LIBRARY(LIBUV_LIBRARIES NAMES uv libuv)
+if (LIBUV_LIBRARIES)
+  message("Found LibUV")
+  list(APPEND LINK_LIBRARIES ${LIBUV_LIBRARIES})
 else()
+  message("could not found libuv")
   include_directories("lib/libuv/include")
   add_subdirectory("lib/libuv")
 endif()
-list(APPEND LINK_LIBRARIES uv_a)
+
 
 find_package(GTest)
 if (${GTEST_FOUND})
