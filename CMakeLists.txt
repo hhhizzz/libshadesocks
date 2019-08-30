@@ -11,6 +11,7 @@ if (${libuv_FOUND})
   message("Found libuv")
   find_package(libuv REQUIRED)
 else()
+  include_directories("lib/libuv/include")
   add_subdirectory("lib/libuv")
 endif()
 list(APPEND LINK_LIBRARIES uv_a)
@@ -48,4 +49,5 @@ add_executable(ss_server_test src/ss_server_test.cc src/ss_server.cc)
 
 add_test(NAME ss_test COMMAND ss_test)
 add_test(NAME ss_encrypt_test COMMAND ss_encrypt_test)
+add_test(NAME ss_server_test COMMAND ss_server_test)
 

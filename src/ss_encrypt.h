@@ -16,7 +16,7 @@ using CryptoPP::AES;
 using CryptoPP::byte;
 using CryptoPP::SecByteBlock;
 
-#include <cryptopp/gcm.h>
+#include <gcm.h>
 using CryptoPP::GCM;
 
 #include <modes.h>
