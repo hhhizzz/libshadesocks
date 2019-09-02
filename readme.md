@@ -1,6 +1,8 @@
-# build command
+# LibShadesocks
 
 ![icon](resource/icon.png)
+
+## build command
 
 ```bash
 # make sure the submodule is loaded
