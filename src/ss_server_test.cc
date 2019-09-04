@@ -1,15 +1,18 @@
 #include <gtest/gtest.h>
-#include <glog/logging.h>
 #include "ss_server.h"
+#include <cstring>
+#include "ss_encrypt.h"
 
-int main(int argc, char** argv) {
-  uv_loop_t* loop = (uv_loop_t*)malloc(sizeof(uv_loop_t));
-  uv_loop_init(loop);
 
-  printf("Now quitting.\n");
-  uv_run(loop, UV_RUN_DEFAULT);
+TEST(ServerTest, startServer) {
+  shadesocks::Server server;
+  server.start();
+}
 
-  uv_loop_close(loop);
-  free(loop);
-  return 0;
+int main(int argc, char **argv) {
+  FLAGS_colorlogtostderr = 1;
+  FLAGS_stderrthreshold = 0;
+  testing::InitGoogleTest(&argc, argv);
+  google::InitGoogleLogging(argv[0]);
+  return RUN_ALL_TESTS();
 }
