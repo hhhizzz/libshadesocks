@@ -12,3 +12,16 @@ mkdir build && cd build && cmake .. && make
 
 ```
 
+## Thanks 
+Without the following repository, there could not be such a project.
+
+[nodejs/node](https://github.com/nodejs/node)
+
+[libuv/libuv](https://github.com/libuv/libuv)
+
+[cryptopp/releases](https://github.com/weidai11/cryptopp/releases)
+
+[noloader/cryptopp-cmake](https://github.com/noloader/cryptopp-cmake)
+
+[skypjack/uvw](https://github.com/skypjack/uvw)
+
