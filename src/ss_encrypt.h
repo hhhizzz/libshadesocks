@@ -64,7 +64,7 @@ class Cipher {
   virtual ~Cipher() {}
 };
 
-template <typename EncryptMode>
+template<typename EncryptMode>
 class ShadeCipher : public Cipher {
  private:
   typename EncryptMode::Encryption encryption;
@@ -87,7 +87,7 @@ class ShadeCipher : public Cipher {
   SecByteBlock GetIv() { return this->iv; }
 
   SecByteBlock encrypt(const string& input) {
-    SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
+    SecByteBlock bytes = SecByteBlock((byte*) input.data(), input.size());
     return this->encrypt(bytes);
   }
   SecByteBlock encrypt(const SecByteBlock& input) {
@@ -97,7 +97,7 @@ class ShadeCipher : public Cipher {
   }
 
   SecByteBlock decrypt(const string& input) {
-    SecByteBlock bytes = SecByteBlock((byte*)input.data(), input.size());
+    SecByteBlock bytes = SecByteBlock((byte*) input.data(), input.size());
     return this->decrypt(bytes);
   }
   SecByteBlock decrypt(const SecByteBlock& input) {

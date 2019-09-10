@@ -8,6 +8,36 @@
 #include "ss_encrypt.h"
 
 namespace shadesocks {
+
+class Loop final {
+ private:
+  using Deleter = void (*)(uv_loop_t*);
+  explicit Loop(std::unique_ptr<uv_loop_t, Deleter> ptr) noexcept
+      : loop{std::move(ptr)} {}
+
+  std::unique_ptr<uv_loop_t, Deleter> loop;
+
+ public:
+  /**
+   * Gets the initialized default loop.
+   */
+  static std::shared_ptr<Loop> getDefault();
+
+  void close();
+
+  bool run(uv_run_mode mode = UV_RUN_DEFAULT) noexcept;
+
+  void stop() noexcept;
+
+  bool alive() const noexcept;
+
+  ~Loop() noexcept {
+    if (this->loop) {
+      close();
+    }
+  }
+};
+
 class Server {
  private:
   uv_tcp_t tcp_server;
@@ -26,6 +56,7 @@ class Server {
   Server();
   ~Server();
 };
+
 class ServerCallback {
  public:
   void static on_new_connection(uv_stream_t* server, int status);
