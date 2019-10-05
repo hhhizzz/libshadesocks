@@ -15,9 +15,16 @@ class UvException : public std::runtime_error {
   explicit UvException(const std::string& what) : std::runtime_error(what) {}
 };
 
+enum AddrType {
+  TypeIPv4 = 1,
+  TypeIPv6 = 4,
+  TypeDomain = 3,
+};
+
 class ShadeHandle final {
  private:
   FRIEND_TEST(ShadeHandleTest, ReadDataTest);
+  FRIEND_TEST(ShadeHandleTest, GetRequestTest);
 
   std::unique_ptr<uv_tcp_t> p_handle_in;
   std::unique_ptr<uv_tcp_t> p_handle_out;
@@ -28,6 +35,75 @@ class ShadeHandle final {
 
   uv_stream_t* p_server;
 
+  SecByteBlock data;
+  ssize_t offset;
+
+  std::unique_ptr<sockaddr_in> GetRequest() {
+    auto addr_type = data[0] & 0xf;
+    this->offset = 1;
+    std::unique_ptr<char> char_addr;
+    std::unique_ptr<sockaddr_in> addr;
+
+    switch (addr_type) {
+      case AddrType::TypeIPv4: {
+        char_addr = std::unique_ptr<char>(new char[4]);
+        for (; offset < 4 + 1; offset++) {
+          char_addr.get()[offset - 1] = data[offset];
+        }
+        addr = std::make_unique<sockaddr_in>();
+        addr->sin_family = AF_INET;
+        memcpy(&addr->sin_addr,
+               char_addr.get(),
+               sizeof(addr->sin_addr));
+        break;
+      }
+      case AddrType::TypeIPv6: {
+        throw UvException("doesn't support IPv6 now");
+      }
+      case AddrType::TypeDomain: {
+        char length = data[1];
+        this->offset += 1;
+        char_addr = std::unique_ptr<char>(new char[length + 1]);
+        for (; offset < length + 2; offset++) {
+          char_addr.get()[offset - 2] = data[offset];
+        }
+        char_addr.get()[length] = '\0';
+
+        addrinfo hints{};
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        struct addrinfo* addr_info;
+        int err = getaddrinfo(char_addr.get(), nullptr, &hints, &addr_info);
+        if (err != 0) {
+          throw UvException(gai_strerror(err));
+        }
+
+        if (addr_info == nullptr) {
+          std::string what = "cannot find address for: ";
+          what.append(char_addr.get());
+          throw UvException(what);
+        }
+
+        addr = std::make_unique<sockaddr_in>();
+        memcpy(addr.get(), addr_info->ai_addr, sizeof(sockaddr_in));
+
+        delete[] addr_info;
+        break;
+      }
+      default:throw UvException("unknown request");
+    }
+
+    uint16_t dport = 0;
+    dport = data[offset++] << 8;
+    dport |= data[offset++];
+    addr->sin_port = htons(dport);
+
+    return addr;
+  }
+
   static void ReadData(uv_stream_t* stream,
                        ssize_t nread,
                        const uv_buf_t* buf) {
@@ -35,11 +111,12 @@ class ShadeHandle final {
     if (shade_handle == nullptr) {
       throw UvException("cannot read data from handle");
     }
-    SecByteBlock data;
+    shade_handle->offset = 0;
+
     DLOG(INFO) << "start to read buffer, nread is: " << nread;
     if (nread > 0) {
       SecByteBlock bytes((byte*) buf->base, nread);
-      DLOG(INFO) << "Got data: " << shadesocks::Util::HexToString(bytes);
+      DLOG(INFO) << "Got data: " << Util::HexToString(bytes);
 
       if (shade_handle->cipher == nullptr) {
         auto cipher_info = cipher_map.at(shade_handle->cipher_method);
@@ -50,19 +127,19 @@ class ShadeHandle final {
                    << ", iv: " << Util::HexToString(iv);
 
         SecByteBlock encrypt_data((byte*) buf->base + cipher_info.iv_length, nread - cipher_info.iv_length);
-        data = shade_handle->cipher->decrypt(encrypt_data);
+        shade_handle->data = shade_handle->cipher->decrypt(encrypt_data);
       } else {
         SecByteBlock encrypt_data((byte*) buf->base, nread);
-        data = shade_handle->cipher->decrypt(encrypt_data);
+        shade_handle->data = shade_handle->cipher->decrypt(encrypt_data);
       }
     } else if (nread < 0) {
       if (nread != UV_EOF) {
         LOG(ERROR) << "Read error: " << uv_err_name(nread);
       }
     } else {
-      LOG(INFO) << "data is empty";
+      DLOG(INFO) << "data is empty";
     }
-    DLOG(INFO) << "encrypt data is: " << std::string((char*) data.data());
+    DLOG(INFO) << "encrypt data is: " << Util::HexToString(shade_handle->data);
 
     delete[] buf->base;
 //    uv_close(reinterpret_cast<uv_handle_t*>(stream), [](uv_handle_t* handle) {
