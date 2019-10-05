@@ -97,7 +97,7 @@ void checkLengthValid(const string& method, SecByteBlock& key,
 }
 
 std::unique_ptr<Cipher> Util::getEncryption(const string& method) {
-  LOG(INFO) << "the key size is 0, so generate the key";
+  LOG(INFO) << "the key is empty, so generate the key";
   int key_length = cipher_map.find(method)->second.key_length;
   int iv_length = cipher_map.find(method)->second.iv_length;
   SecByteBlock key = Util::RandomBlock(key_length);

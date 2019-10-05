@@ -46,11 +46,11 @@ list(APPEND LINK_LIBRARIES cryptopp-static)
 link_libraries(${LINK_LIBRARIES})
 enable_testing()
 
-# add_executable(ss_test src/ss_test.cc src/ss.cc)
-# add_executable(ss_encrypt_test src/ss_encrypt_test.cc src/ss_encrypt.cc)
+add_executable(ss_test src/ss_test.cc src/ss_encrypt.cc)
+add_executable(ss_encrypt_test src/ss_encrypt_test.cc src/ss_encrypt.cc)
 add_executable(ss_server_test src/ss_server_test.cc src/ss_encrypt.cc)
 
-# add_test(NAME ss_test COMMAND ss_test)
-# add_test(NAME ss_encrypt_test COMMAND ss_encrypt_test)
+add_test(NAME ss_test COMMAND ss_test)
+add_test(NAME ss_encrypt_test COMMAND ss_encrypt_test)
 add_test(NAME ss_server_test COMMAND ss_server_test)
 
