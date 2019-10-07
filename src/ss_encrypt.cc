@@ -10,7 +10,7 @@ string Util::HexToString(const SecByteBlock& input) {
   auto output_size = encoder.MaxRetrievable();
   if (output_size) {
     encoded.resize(output_size);
-    encoder.Get((byte*)&encoded[0], encoded.size());
+    encoder.Get((byte*) &encoded[0], encoded.size());
   }
 
   return encoded;
@@ -20,7 +20,7 @@ SecByteBlock Util::StringToHex(const string& input) {
   SecByteBlock decoded;
   HexDecoder decoder;
 
-  decoder.Put((byte*)input.data(), input.size());
+  decoder.Put((byte*) input.data(), input.size());
   decoder.MessageEnd();
 
   auto output_size = decoder.MaxRetrievable();
@@ -33,13 +33,13 @@ SecByteBlock Util::StringToHex(const string& input) {
 
 SecByteBlock Util::Md5Sum(const SecByteBlock& input) {
   MD5 hash;
-  byte* decoded;
+  std::unique_ptr<byte> decoded;
 
   hash.Update(input, input.size());
-  decoded = new byte[hash.DigestSize()];
-  hash.Final(decoded);
+  decoded = std::unique_ptr<byte>(new byte[hash.DigestSize()]);
+  hash.Final(decoded.get());
 
-  return SecByteBlock(decoded, hash.DigestSize());
+  return SecByteBlock(decoded.get(), hash.DigestSize());
 }
 
 SecByteBlock Util::PasswordToKey(const string& password, size_t key_length) {
@@ -55,7 +55,7 @@ SecByteBlock Util::PasswordToKey(const string& password, size_t key_length) {
   SecByteBlock result(cnt * md5_length);
 
   auto md5_password =
-      Md5Sum(SecByteBlock((byte*)password.data(), password.size()));
+      Md5Sum(SecByteBlock((byte*) password.data(), password.size()));
   for (int i = 0; i < md5_length; i++) {
     result[i] = md5_password[i];
   }
@@ -86,13 +86,13 @@ void checkLengthValid(const string& method, SecByteBlock& key,
   }
   if (key.size() != found->second.key_length) {
     throw InvalidArgument("key size is not right, expect " +
-                          std::to_string(found->second.key_length) +
-                          ", actual " + std::to_string(key.size()));
+        std::to_string(found->second.key_length) +
+        ", actual " + std::to_string(key.size()));
   }
   if (iv.size() != found->second.iv_length) {
     throw InvalidArgument("iv size is not right, expect " +
-                          std::to_string(found->second.iv_length) +
-                          ", actual " + std::to_string(iv.size()));
+        std::to_string(found->second.iv_length) +
+        ", actual " + std::to_string(iv.size()));
   }
 }
 
@@ -113,11 +113,11 @@ std::unique_ptr<Cipher> Util::getEncryption(const string& method,
   checkLengthValid(method, key, iv);
 
   if (method.find("cfb") != std::string::npos) {
-    encryption.reset(new shadesocks::ShadeCipher<CFB_Mode<AES>>(key, iv));
+    encryption = std::unique_ptr<shadesocks::Cipher>(new shadesocks::ShadeCipher<CFB_Mode<AES>>(key, iv));
   } else if (method.find("ctr") != std::string::npos) {
-    encryption.reset(new shadesocks::ShadeCipher<CTR_Mode<AES>>(key, iv));
+    encryption = std::unique_ptr<shadesocks::Cipher>(new shadesocks::ShadeCipher<CTR_Mode<AES>>(key, iv));
   } else if (method.find("gcm") != std::string::npos) {
-    encryption.reset(new shadesocks::ShadeCipher<GCM<AES>>(key, iv));
+    encryption = std::unique_ptr<shadesocks::Cipher>(new shadesocks::ShadeCipher<GCM<AES>>(key, iv));
   } else {
     throw InvalidArgument("cannot encrypt by method: " + method);
   }

@@ -45,7 +45,7 @@ class TCPHandle {
         throw UvException(status);
       }
       auto shade_handle = new ShadeHandle(server);
-      shade_handle->accept();
+      shade_handle->Accept(server);
     };
 
     int err = uv_listen(reinterpret_cast<uv_stream_t*>(&this->resource), backlog, on_connection);
@@ -122,10 +122,10 @@ class Loop final : public std::enable_shared_from_this<Loop> {
       throw UvException("cannot create handle without loop");
     }
 
-    auto handle_ptr = new TCPHandle{};
+    auto handle_ptr = std::shared_ptr<TCPHandle>(new TCPHandle{});
     uv_tcp_init(this->get(), &handle_ptr->resource);
 
-    return std::shared_ptr<TCPHandle>(handle_ptr);
+    return handle_ptr;
   }
 
   ~Loop() noexcept {

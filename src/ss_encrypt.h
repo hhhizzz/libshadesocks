@@ -6,6 +6,7 @@
 #include <cryptlib.h>
 using CryptoPP::InvalidArgument;
 #include <string>
+#include <memory>
 using std::string;
 
 #include <osrng.h>
