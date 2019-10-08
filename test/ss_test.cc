@@ -38,10 +38,12 @@ TEST(ShadeHandleTest, GetRequestTest) {
   shade_handle.GetRequest();
   auto addr = std::move(shade_handle.addr_out);
   inet_ntop(addr->sin_family, &addr->sin_addr, hostname, NI_MAXHOST);
+  auto port = ntohs(addr->sin_port);
+
   LOG(INFO) << "ip is: " << hostname;
   LOG(INFO) << "hostname is: " << shade_handle.hostname_out;
-  LOG(INFO) << "port is: " << ntohs(addr->sin_port);
-  ASSERT_EQ(ntohs(addr->sin_port), 80);
+  LOG(INFO) << "port is: " << port;
+  ASSERT_EQ(port, 80);
   ASSERT_STRCASEEQ(shade_handle.hostname_out.data(), "connectivitycheck.gstatic.com");
 
   LOG(INFO) << "start to check IPv4";
@@ -52,10 +54,12 @@ TEST(ShadeHandleTest, GetRequestTest) {
   shade_handle.GetRequest();
   addr = std::move(shade_handle.addr_out);
   inet_ntop(addr->sin_family, &addr->sin_addr, hostname, NI_MAXHOST);
+  port = ntohs(addr->sin_port);
+
   LOG(INFO) << "ip is: " << hostname;
   LOG(INFO) << "hostname is: " << shade_handle.hostname_out;
-  LOG(INFO) << "port is: " << ntohs(addr->sin_port);
-  ASSERT_EQ(ntohs(addr->sin_port), 80);
+  LOG(INFO) << "port is: " << port;
+  ASSERT_EQ(port, 80);
   ASSERT_STRCASEEQ(hostname, "203.208.43.88");
   ASSERT_STRCASEEQ(shade_handle.hostname_out.data(), "203.208.43.88");
 
