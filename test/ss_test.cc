@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <glog/logging.h>
-#include "ss.h"
+#include "../src/ss.h"
 namespace shadesocks {
 TEST(ShadeHandleTest, ReadDataTest) {
 
@@ -18,6 +18,7 @@ TEST(ShadeHandleTest, ReadDataTest) {
     buf.base[i] = block.data()[i];
   }
 
+  shade_handle.proxy_state = ProxyState::ClientReading;
   ShadeHandle::ReadClientData(stream, 158, &buf);
 
   delete stream;
@@ -59,21 +60,6 @@ TEST(ShadeHandleTest, GetRequestTest) {
   ASSERT_STRCASEEQ(shade_handle.hostname_out.data(), "203.208.43.88");
 
   delete stream;
-}
-
-TEST(ShadeHandleTest, ConnectTest) {
-  auto* stream = new uv_stream_t{};
-  stream->loop = uv_default_loop();
-  ShadeHandle shade_handle(stream);
-
-  auto block = Util::StringToHex(
-      "031D636F6E6E6563746976697479636865636B2E677374617469632E636F6D005048454144202F67656E65726174655F32303420485454502F312E310D0A486F73743A20636F6E6E6563746976697479636865636B2E677374617469632E636F6D0D0A557365722D4167656E743A20537572676520546573742F312E300D0A4163636570743A202A2F2A0D0A0D0A");
-  shade_handle.data = block;
-
-  char hostname[NI_MAXHOST];
-  shade_handle.GetRequest();
-  shade_handle.Connect();
-  uv_run(stream->loop, UV_RUN_DEFAULT);
 }
 
 }

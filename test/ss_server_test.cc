@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "ss_server.h"
-#include "ss_encrypt.h"
-#include "ss.h"
+#include "../src/ss_server.h"
+#include "../src/ss_encrypt.h"
+#include "../src/ss.h"
 
 void handle_signal(int signal) {
   LOG(INFO) << "stop the server";

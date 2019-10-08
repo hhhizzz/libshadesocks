@@ -143,7 +143,7 @@ class ShadeHandle final {
 
     switch (addr_type) {
       case AddrType::TypeIPv4: {
-        char_addr.reserve(4);
+        char_addr.resize(4);
         for (; offset < 4 + 1; offset++) {
           char_addr[offset - 1] = data[offset];
           this->hostname_out.append(std::to_string(int(data[offset])));
@@ -164,13 +164,12 @@ class ShadeHandle final {
       case AddrType::TypeDomain: {
         char length = data[1];
         this->offset += 1;
-        char_addr.reserve(length + 1);
+        char_addr.resize(length);
         for (; offset < length + 2; offset++) {
           char_addr[offset - 2] = data[offset];
         }
-        char_addr[length] = '\0';
 
-        addrinfo hints;
+        addrinfo hints{};
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
@@ -179,7 +178,7 @@ class ShadeHandle final {
         struct addrinfo* addr_info;
 
         //TODO: use uv call back to get addrinfo
-        int err = getaddrinfo(&char_addr[0], nullptr, nullptr, &addr_info);
+        int err = getaddrinfo(char_addr.data(), nullptr, &hints, &addr_info);
         if (err != 0) {
           throw UvException(gai_strerror(err));
         }
