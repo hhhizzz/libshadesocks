@@ -178,6 +178,8 @@ class ShadeHandle final {
         struct addrinfo* addr_info;
 
         //TODO: use uv call back to get addrinfo
+        clock_t t1 = clock();
+
         int err = getaddrinfo(char_addr.data(), nullptr, &hints, &addr_info);
         if (err != 0) {
           throw UvException(gai_strerror(err));
@@ -194,6 +196,9 @@ class ShadeHandle final {
         memcpy(addr_out.get(), addr_info->ai_addr, sizeof(sockaddr_in));
 
         freeaddrinfo(addr_info);
+
+        clock_t t2 = clock();
+        DLOG(INFO) << "getaddrinfo use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
         break;
       }
       default:throw UvException("unknown request");
@@ -236,6 +241,9 @@ class ShadeHandle final {
 
       //if it's first time getting data from client, create cipher and parse server address
       if (shade_handle->cipher == nullptr) {
+
+        clock_t t1 = clock();
+
         auto found = cipher_map.find(shade_handle->cipher_method);
         if (found == cipher_map.cend()) {
           throw ProxyException("unsupported encrypt method");
@@ -249,6 +257,9 @@ class ShadeHandle final {
 
         SecByteBlock encrypt_data((byte*) buf->base + cipher_info.iv_length, nread - cipher_info.iv_length);
         shade_handle->data = shade_handle->cipher->decrypt(encrypt_data);
+
+        clock_t t2 = clock();
+        DLOG(INFO) << "decrypt data use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
 
         uv_read_stop(stream);
 
@@ -352,6 +363,8 @@ class ShadeHandle final {
       SecByteBlock bytes((byte*) buf->base, nread);
       DLOG(INFO) << "Got data: \n" << std::string(buf->base);
 
+      clock_t t1 = clock();
+
       //encrypt data
       auto cipher_info = cipher_map.at(shade_handle->cipher_method);
       auto iv = SecByteBlock((byte*) buf->base, cipher_info.iv_length);
@@ -359,6 +372,10 @@ class ShadeHandle final {
       SecByteBlock decrypt_data((byte*) buf->base + cipher_info.iv_length, nread - cipher_info.iv_length);
       shade_handle->data = shade_handle->cipher->encrypt(decrypt_data);
       shade_handle->offset = 0;
+
+      clock_t t2 = clock();
+
+      DLOG(INFO) << "encrypt data use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
 
       uv_read_stop(stream);
 
