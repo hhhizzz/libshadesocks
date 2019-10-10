@@ -50,7 +50,8 @@ class ShadeHandle final {
   std::unique_ptr<sockaddr_in> addr_out;
   std::string hostname_out;
 
-  std::unique_ptr<Cipher> cipher;
+  std::unique_ptr<Cipher> decrypt_cipher;
+  std::unique_ptr<Cipher> encrypt_cipher;
   std::string cipher_method;
   std::string password;
 
@@ -59,7 +60,7 @@ class ShadeHandle final {
   ssize_t offset;
 
   //save plaintext
-  char temp[2000];
+  char temp[10000];
   ssize_t length;
 
   void DoNext() {
@@ -125,7 +126,7 @@ class ShadeHandle final {
 
   //send client data to server
   void WriteServer() {
-    DLOG(INFO) << "start to write data to server";
+    DLOG(INFO) << "start to write data to server, length: " << this->length;
 
     auto p_write = new uv_write_t{};
     p_write->data = this;
@@ -144,7 +145,7 @@ class ShadeHandle final {
   void ReadServer() {
     this->p_handle_out.data = this;
     DLOG(INFO) << "start to read from server";
-    uv_read_start(this->handle_out<uv_stream_t>(), AllocBuffer, ReadServerData);
+    uv_read_start(this->handle_out<uv_stream_t>(), AllocBuffer, ReadServerDone);
   }
 
   //send server data to client
@@ -153,8 +154,8 @@ class ShadeHandle final {
     p_write->data = this;
 
     uv_buf_t buf;
-    buf.len = this->data.size() - this->offset;
-    buf.base = (char*) &this->data[this->offset];
+    buf.len = this->length;
+    buf.base = this->temp;
 
     uv_write(p_write,
              this->handle_in<uv_stream_t>(),
@@ -241,13 +242,14 @@ class ShadeHandle final {
   }
 
   void ReadClient() {
+    DLOG(INFO) << "start read data from client";
     this->p_handle_in.data = this;
-    uv_read_start(this->handle_in<uv_stream_t>(), AllocBuffer, ReadClientData);
+    uv_read_start(this->handle_in<uv_stream_t>(), AllocBuffer, ReadClientDone);
   }
 
   //call back method for read from client handle
   //decrypt data
-  static void ReadClientData(uv_stream_t* stream,
+  static void ReadClientDone(uv_stream_t* stream,
                              ssize_t nread,
                              const uv_buf_t* buf) {
     //check if ShadeHandle created
@@ -264,13 +266,13 @@ class ShadeHandle final {
 
     shade_handle->offset = 0;
 
-    DLOG(INFO) << "start to read buffer from client, nread is: " << nread;
+    DLOG(INFO) << "read buffer from client, nread is: " << nread;
     if (nread > 0) {
       SecByteBlock bytes((byte*) buf->base, nread);
-      DLOG(INFO) << "Got data: " << Util::HexToString(bytes);
+      DLOG(INFO) << "Got data from client, length:  " << nread;
 
       //if it's first time getting data from client, create cipher and parse server address
-      if (shade_handle->cipher == nullptr) {
+      if (shade_handle->decrypt_cipher == nullptr) {
 
         clock_t t1 = clock();
 
@@ -281,21 +283,20 @@ class ShadeHandle final {
         auto cipher_info = found->second;
         auto iv = SecByteBlock((byte*) buf->base, cipher_info.iv_length);
         auto key = Util::PasswordToKey(shade_handle->password, cipher_info.key_length);
-        shade_handle->cipher = Util::getEncryption(shade_handle->cipher_method, key, iv);
-        DLOG(INFO) << "cipher created, method: " << shade_handle->cipher_method << ", key: " << Util::HexToString(key)
+        shade_handle->decrypt_cipher = Util::getEncryption(shade_handle->cipher_method, key, iv);
+        DLOG(INFO) << "decrypt created, method: " << shade_handle->cipher_method << ", key: " << Util::HexToString(key)
                    << ", iv: " << Util::HexToString(iv);
 
         SecByteBlock encrypt_data((byte*) buf->base + cipher_info.iv_length, nread - cipher_info.iv_length);
-        shade_handle->data = shade_handle->cipher->decrypt(encrypt_data);
+        shade_handle->data = shade_handle->decrypt_cipher->decrypt(encrypt_data);
 
         clock_t t2 = clock();
         DLOG(INFO) << "decrypt data use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
 
-//        uv_read_stop(stream);
-
         shade_handle->GetRequest();
         shade_handle->length = shade_handle->data.size() - shade_handle->offset;
         if (shade_handle->length) {
+          uv_read_stop(stream);
           shade_handle->CopyToTemp();
           shade_handle->Connect();
         }
@@ -303,12 +304,12 @@ class ShadeHandle final {
         clock_t t1 = clock();
 
         SecByteBlock encrypt_data((byte*) buf->base, nread);
-        shade_handle->data = shade_handle->cipher->decrypt(encrypt_data);
+        shade_handle->data = shade_handle->decrypt_cipher->decrypt(encrypt_data);
 
         clock_t t2 = clock();
         DLOG(INFO) << "decrypt data use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
 
-//        uv_read_stop(stream);
+        uv_read_stop(stream);
 
         shade_handle->CopyToTemp();
         if (shade_handle->connected) {
@@ -319,8 +320,7 @@ class ShadeHandle final {
         }
 
       }
-      DLOG(INFO) << "encrypt data length is(" << shade_handle->length << "): \n "
-                 << std::string(shade_handle->temp, shade_handle->length);
+      DLOG(INFO) << "encrypt data length is: " << shade_handle->length;
 
     } else if (nread < 0) {
       if (nread != UV_EOF) {
@@ -337,16 +337,16 @@ class ShadeHandle final {
       }
     }
 
-    delete[] buf->base;
   }
 
   static void WriteClientDone(uv_write_t* req, int status) {
     //check if ShadeHandle created
-    DLOG(INFO) << "data has been wrote to client";
     auto shade_handle = reinterpret_cast<ShadeHandle*>(req->data);
     if (shade_handle == nullptr) {
       throw UvException("cannot read data from handle");
     }
+
+    DLOG(INFO) << "data has been wrote to client, length: " << shade_handle->length;
 
     //check if current state is right
     if (shade_handle->proxy_state != ProxyState::ClientWriting) {
@@ -359,16 +359,18 @@ class ShadeHandle final {
     }
 
     shade_handle->proxy_state = ProxyState::ClientReading;
+    shade_handle->DoNext();
     delete req;
   }
 
   static void WriteServerDone(uv_write_t* req, int status) {
     //check if ShadeHandle created
-    DLOG(INFO) << "data has been wrote to server";
     auto shade_handle = reinterpret_cast<ShadeHandle*>(req->data);
     if (shade_handle == nullptr) {
       throw UvException("cannot read data from handle");
     }
+
+    DLOG(INFO) << "data has been wrote to server, length: " << shade_handle->length;
 
     //check if current state is right
     if (shade_handle->proxy_state != ProxyState::ServerWriting) {
@@ -386,7 +388,7 @@ class ShadeHandle final {
   }
 
   //copy data to this->data
-  static void ReadServerData(uv_stream_t* stream,
+  static void ReadServerDone(uv_stream_t* stream,
                              ssize_t nread,
                              const uv_buf_t* buf) {
     DLOG(INFO) << "read buffer from server, nread is: " << nread;
@@ -405,23 +407,42 @@ class ShadeHandle final {
     if (nread > 0) {
 
       SecByteBlock bytes((byte*) buf->base, nread);
-      DLOG(INFO) << "Got data: \n" << std::string(buf->base);
+      DLOG(INFO) << "Got data, length: " << nread;
 
       clock_t t1 = clock();
 
-      //encrypt data
-      auto cipher_info = cipher_map.at(shade_handle->cipher_method);
-      auto iv = SecByteBlock((byte*) buf->base, cipher_info.iv_length);
-      auto key = Util::PasswordToKey(shade_handle->password, cipher_info.key_length);
-      SecByteBlock decrypt_data((byte*) buf->base + cipher_info.iv_length, nread - cipher_info.iv_length);
-      shade_handle->data = shade_handle->cipher->encrypt(decrypt_data);
-      shade_handle->offset = 0;
+      if (shade_handle->encrypt_cipher == nullptr) {
+        //encrypt data
+        auto cipher_info = cipher_map.at(shade_handle->cipher_method);
+        auto iv = Util::RandomBlock(cipher_info.iv_length);
+        auto key = Util::PasswordToKey(shade_handle->password, cipher_info.key_length);
+        shade_handle->encrypt_cipher = Util::getEncryption(shade_handle->cipher_method, key, iv);
+
+        DLOG(INFO) << "encrypt cipher created, method: " << shade_handle->cipher_method << ", key: " << Util::HexToString(key)
+                   << ", iv: " << Util::HexToString(iv);
+
+        SecByteBlock decrypt_data((byte*) buf->base, nread);
+
+        shade_handle->data = shade_handle->encrypt_cipher->encrypt(decrypt_data);
+        shade_handle->length = iv.size() + nread;
+
+        memcpy(shade_handle->temp, iv.data(), iv.size());
+        memcpy(shade_handle->temp + iv.size(), shade_handle->data.data(), shade_handle->data.size());
+      } else {
+        SecByteBlock decrypt_data((byte*) buf->base, nread);
+        shade_handle->data = shade_handle->encrypt_cipher->encrypt(decrypt_data);
+        shade_handle->length = nread;
+
+        memcpy(shade_handle->temp, shade_handle->data.data(), shade_handle->data.size());
+      }
+
+      DLOG(INFO) << "send data to client, length: " << shade_handle->length;
 
       clock_t t2 = clock();
 
       DLOG(INFO) << "encrypt data use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
 
-//      uv_read_stop(stream);
+      uv_read_stop(stream);
 
       shade_handle->proxy_state = ProxyState::ClientWriting;
       shade_handle->DoNext();
@@ -433,15 +454,17 @@ class ShadeHandle final {
         DLOG(INFO) << "got an EOF";
       }
     }
-
-    delete[] buf->base;
   }
 
   static void AllocBuffer(uv_handle_t* handle,
                           size_t suggested_size,
                           uv_buf_t* buf) {
-    buf->base = new char[suggested_size];
-    buf->len = suggested_size;
+    auto shade_handle = reinterpret_cast<ShadeHandle*>(handle->data);
+    if (shade_handle == nullptr) {
+      throw UvException("cannot read data from handle");
+    }
+    buf->base = shade_handle->temp;
+    buf->len = sizeof(shade_handle->temp);
   }
 
  public:

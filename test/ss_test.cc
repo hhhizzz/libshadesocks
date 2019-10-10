@@ -19,7 +19,7 @@ TEST(ShadeHandleTest, ReadDataTest) {
   }
 
   shade_handle.proxy_state = ProxyState::ClientReading;
-  ShadeHandle::ReadClientData(stream, 158, &buf);
+  ShadeHandle::ReadClientDone(stream, 158, &buf);
 
   delete stream;
 }
