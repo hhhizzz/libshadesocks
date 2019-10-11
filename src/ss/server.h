@@ -1,12 +1,11 @@
-#ifndef SS_SERVER_H__
-#define SS_SERVER_H__
+#ifndef SHADESOCKS_SRC_SS_SERVER_H__
+#define SHADESOCKS_SRC_SS_SERVER_H__
 #include <uv.h>
 #include <glog/logging.h>
 #include <memory>
 #include <utility>
 #include <vector>
 #include <iostream>
-#include "../ss.h"
 #include "encrypt.h"
 
 namespace shadesocks {

@@ -1,6 +1,5 @@
-#include <gtest/gtest.h>
-#include <glog/logging.h>
-#include "../src/ss.h"
+#include "ss_test.h"
+
 namespace shadesocks {
 TEST(ShadeHandleTest, ReadDataTest) {
 

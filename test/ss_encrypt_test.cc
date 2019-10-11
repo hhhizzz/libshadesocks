@@ -1,10 +1,4 @@
-#include <gtest/gtest.h>
-#include <glog/logging.h>
-#include "../src/ss/encrypt.h"
-
-#include <iostream>
-using std::cout;
-using std::endl;
+#include "ss_test.h"
 
 TEST(EncryptTest, HandleStringToHex) {
   string input = "FFEEDDCCBBAA99887766554433221100";
@@ -22,7 +16,7 @@ TEST(EncryptTest, HandleHexToString) {
                0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
   SecByteBlock input(bytes, sizeof(bytes));
   string actual = shadesocks::Util::HexToString(input);
-  cout << "the result is " << actual << endl;
+  LOG(INFO) << "the result is " << actual;
   EXPECT_EQ(actual, "FFEEDDCCBBAA99887766554433221100");
 }
 
@@ -32,10 +26,10 @@ TEST(EncryptTest, HandleMD5) {
                   0x5f, 0x30, 0x0c, 0x66, 0x43, 0x12, 0xc6, 0x3f};
 
   std::string digest;
-  auto bytes = (byte*)(msg.data());
+  auto bytes = (byte*) (msg.data());
   SecByteBlock secBytes(bytes, msg.size());
   auto output = shadesocks::Util::Md5Sum(secBytes);
-  cout << "the result is " << shadesocks::Util::HexToString(output) << endl;
+  LOG(INFO) << "the result is " << shadesocks::Util::HexToString(output);
   for (int i = 0; i < output.size(); i++) {
     EXPECT_EQ(output[i], expected[i]);
   }
@@ -47,7 +41,7 @@ TEST(EncryptTest, HandlePassword) {
                   0x5f, 0x30, 0x0c, 0x66, 0x43, 0x12, 0xc6, 0x3f,
                   0x56, 0x83, 0x78, 0x52, 0x96, 0x14, 0xd2, 0x2d,
                   0xdb, 0x49, 0x23, 0x7d, 0x2f, 0x60, 0xbf, 0xdf};
-  cout << shadesocks::Util::HexToString(bytes) << endl;
+  LOG(INFO) << shadesocks::Util::HexToString(bytes);
   for (int i = 0; i < bytes.size(); i++) {
     EXPECT_EQ(bytes[i], expected[i]);
   }
@@ -61,29 +55,26 @@ void test_encrypt(const string& method) {
   SecByteBlock key = cipher->GetKey();
   SecByteBlock iv = cipher->GetIv();
   encoded = shadesocks::Util::HexToString(key);
-  cout << "the key is : " + encoded << endl;
+  LOG(INFO) << "the key is : " + encoded;
   encoded = shadesocks::Util::HexToString(iv);
-  cout << "the iv  is : " + encoded << endl;
+  LOG(INFO) << "the iv  is : " + encoded;
 
   std::string plain_text = "Hello! How are you.";
-  cout << "plain text is " << plain_text << endl;
+  LOG(INFO) << "plain text is " << plain_text;
 
   //////////////////////////////////////////////////////////////////////////
   // Encrypt
 
   auto encryptData = cipher->encrypt(plain_text);
-  cout << "encrypt byte is " << shadesocks::Util::HexToString(encryptData)
-       << endl;
+  LOG(INFO) << "encrypt byte is " << shadesocks::Util::HexToString(encryptData);
 
   //////////////////////////////////////////////////////////////////////////
   // Decrypt
   auto decryptData = cipher->decrypt(encryptData);
-  cout << "decrypt byte is " << shadesocks::Util::HexToString(decryptData)
-       << endl;
-  cout << "decrypt text is "
-       << string(reinterpret_cast<char*>(decryptData.data()),
-                 decryptData.size())
-       << endl;
+  LOG(INFO) << "decrypt byte is " << shadesocks::Util::HexToString(decryptData);
+  LOG(INFO) << "decrypt text is "
+            << string(reinterpret_cast<char*>(decryptData.data()),
+                      decryptData.size());
   for (int i = 0; i < decryptData.size(); i++) {
     EXPECT_EQ(plain_text[i], decryptData[i]);
   }
@@ -91,39 +82,39 @@ void test_encrypt(const string& method) {
 
 TEST(EncryptTest, HandleAES) {
   string method = "aes-128-cfb";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-192-cfb";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-256-cfb";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-128-ctr";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-192-ctr";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-256-ctr";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-128-gcm";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-192-gcm";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
   method = "aes-256-gcm";
-  LOG(INFO) << "start to test method " + method << endl;
+  LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 }
 

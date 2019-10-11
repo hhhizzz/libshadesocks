@@ -1,13 +1,10 @@
-#ifndef SS_ENCRYPT_H__
-#define SS_ENCRYPT_H__
+#ifndef SHADESOCKS_SRC_SS_ENCRYPT_H_
+#define SHADESOCKS_SRC_SS_ENCRYPT_H_
 
 #include <glog/logging.h>
 
 #include <cryptlib.h>
 using CryptoPP::InvalidArgument;
-#include <string>
-#include <memory>
-using std::string;
 
 #include <osrng.h>
 using CryptoPP::AutoSeededRandomPool;
@@ -43,7 +40,7 @@ struct CipherInfo {
   int iv_length;
 };
 
-const std::map<string, CipherInfo> cipher_map{
+const std::map<std::string, CipherInfo> cipher_map{
     {"aes-128-cfb", {16, 16}}, {"aes-192-cfb", {24, 16}},
     {"aes-256-cfb", {32, 16}}, {"aes-128-ctr", {16, 16}},
     {"aes-192-ctr", {24, 16}}, {"aes-256-ctr", {32, 16}},
@@ -56,10 +53,10 @@ class Cipher {
   virtual SecByteBlock GetKey() = 0;
   virtual SecByteBlock GetIv() = 0;
 
-  virtual SecByteBlock encrypt(const string&) = 0;
+  virtual SecByteBlock encrypt(const std::string&) = 0;
   virtual SecByteBlock encrypt(const SecByteBlock&) = 0;
 
-  virtual SecByteBlock decrypt(const string&) = 0;
+  virtual SecByteBlock decrypt(const std::string&) = 0;
   virtual SecByteBlock decrypt(const SecByteBlock&) = 0;
 
   virtual ~Cipher() {}
@@ -87,7 +84,7 @@ class ShadeCipher : public Cipher {
   SecByteBlock GetKey() { return this->key; }
   SecByteBlock GetIv() { return this->iv; }
 
-  SecByteBlock encrypt(const string& input) {
+  SecByteBlock encrypt(const std::string& input) {
     SecByteBlock bytes = SecByteBlock((byte*) input.data(), input.size());
     return this->encrypt(bytes);
   }
@@ -97,7 +94,7 @@ class ShadeCipher : public Cipher {
     return output;
   }
 
-  SecByteBlock decrypt(const string& input) {
+  SecByteBlock decrypt(const std::string& input) {
     SecByteBlock bytes = SecByteBlock((byte*) input.data(), input.size());
     return this->decrypt(bytes);
   }
@@ -112,7 +109,7 @@ class ShadeCipher : public Cipher {
 
 class Util {
  private:
-  static void checkLengthValid(const string& method, SecByteBlock& key,
+  static void checkLengthValid(const std::string& method, SecByteBlock& key,
                                SecByteBlock& iv) {
     auto found = cipher_map.find(method);
     if (found == cipher_map.end()) {
@@ -130,8 +127,8 @@ class Util {
     }
   }
  public:
-  static string HexToString(const SecByteBlock& input) {
-    string encoded;
+  static std::string HexToString(const SecByteBlock& input) {
+    std::string encoded;
     HexEncoder encoder;
 
     encoder.Put(input, input.size());
@@ -145,7 +142,7 @@ class Util {
     return encoded;
   }
 
-  static SecByteBlock StringToHex(const string& input) {
+  static SecByteBlock StringToHex(const std::string& input) {
     SecByteBlock decoded;
     HexDecoder decoder;
 
@@ -161,7 +158,7 @@ class Util {
   }
 
   // Returns md5 padding password in bytes
-  static SecByteBlock PasswordToKey(const string& password, size_t key_length) {
+  static SecByteBlock PasswordToKey(const std::string& password, size_t key_length) {
     MD5 hash;
     SecByteBlock decoded;
     const int md5_length = 16;
@@ -208,7 +205,7 @@ class Util {
     return SecByteBlock(decoded.get(), hash.DigestSize());
   }
 
-  static std::unique_ptr<Cipher> getEncryption(const string& method,
+  static std::unique_ptr<Cipher> getEncryption(const std::string& method,
                                                SecByteBlock& key,
                                                SecByteBlock& iv) {
     std::unique_ptr<shadesocks::Cipher> encryption;
@@ -227,7 +224,7 @@ class Util {
     return encryption;
   }
 
-  static std::unique_ptr<Cipher> getEncryption(const string& method) {
+  static std::unique_ptr<Cipher> getEncryption(const std::string& method) {
     LOG(INFO) << "the key is empty, so generate the key";
     int key_length = cipher_map.find(method)->second.key_length;
     int iv_length = cipher_map.find(method)->second.iv_length;

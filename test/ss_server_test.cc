@@ -1,6 +1,4 @@
-#include <gtest/gtest.h>
-#include "../src/ss/server.h"
-#include "../src/ss.h"
+#include "ss_test.h"
 
 void handle_signal(int signal) {
   LOG(INFO) << "stop the server";
