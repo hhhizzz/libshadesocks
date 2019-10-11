@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 #include <iostream>
-#include "ss.h"
-#include "ss_encrypt.h"
+#include "../ss.h"
+#include "encrypt.h"
 
 namespace shadesocks {
 

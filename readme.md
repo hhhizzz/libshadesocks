@@ -12,6 +12,25 @@ mkdir build && cd build && cmake .. && make
 
 ```
 
+## usage
+
+add `add_subdirectory("libshadesocks")` in `CMakeLists.txt`
+
+```cpp
+#include "ss.h"
+
+auto loop = shadesocks::Loop::getDefault();
+
+auto tcp = loop->create_tcp_handle();
+try {
+    tcp->bind("0.0.0.0", 1080);
+    tcp->listen();
+    loop->run();
+} catch (shadesocks::UvException& uvException) {
+    LOG(ERROR) << uvException.what();
+}
+```
+
 ## Thanks 
 Without the following repository, there could not be such a project.
 

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <glog/logging.h>
-#include "../src/ss_encrypt.h"
+#include "../src/ss/encrypt.h"
 
 #include <iostream>
 using std::cout;

@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
-#include "../src/ss_server.h"
-#include "../src/ss_encrypt.h"
+#include "../src/ss/server.h"
 #include "../src/ss.h"
 
 void handle_signal(int signal) {

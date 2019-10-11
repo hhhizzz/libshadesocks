@@ -4,7 +4,7 @@
 #include <utility>
 #include <uv.h>
 #include <gtest/gtest_prod.h>
-#include "ss_encrypt.h"
+#include "ss/encrypt.h"
 
 #ifndef SS_H__
 #define SS_H__
@@ -115,13 +115,8 @@ class ShadeHandle final {
   }
 
   void CopyToTemp() {
-    DLOG(INFO) << "start to copy data to temp";
-
     this->length = data.size() - offset;
-
     memcpy(temp, data.data() + offset, length);
-
-    DLOG(INFO) << "data has copied to temp";
   }
 
   //send client data to server
@@ -284,7 +279,8 @@ class ShadeHandle final {
         auto iv = SecByteBlock((byte*) buf->base, cipher_info.iv_length);
         auto key = Util::PasswordToKey(shade_handle->password, cipher_info.key_length);
         shade_handle->decrypt_cipher = Util::getEncryption(shade_handle->cipher_method, key, iv);
-        DLOG(INFO) << "decrypt created, method: " << shade_handle->cipher_method << ", key: " << Util::HexToString(key)
+        DLOG(INFO) << "decrypt cipher created, method: " << shade_handle->cipher_method << ", key: "
+                   << Util::HexToString(key)
                    << ", iv: " << Util::HexToString(iv);
 
         SecByteBlock encrypt_data((byte*) buf->base + cipher_info.iv_length, nread - cipher_info.iv_length);
@@ -418,7 +414,8 @@ class ShadeHandle final {
         auto key = Util::PasswordToKey(shade_handle->password, cipher_info.key_length);
         shade_handle->encrypt_cipher = Util::getEncryption(shade_handle->cipher_method, key, iv);
 
-        DLOG(INFO) << "encrypt cipher created, method: " << shade_handle->cipher_method << ", key: " << Util::HexToString(key)
+        DLOG(INFO) << "encrypt cipher created, method: " << shade_handle->cipher_method << ", key: "
+                   << Util::HexToString(key)
                    << ", iv: " << Util::HexToString(iv);
 
         SecByteBlock decrypt_data((byte*) buf->base, nread);
