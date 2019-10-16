@@ -6,7 +6,6 @@
 #include <uv.h>
 #include <gtest/gtest_prod.h>
 #include "ss/encrypt.h"
-#include "ss/connection.h"
 #include "ss/handle.h"
 #include "ss/server.h"
 

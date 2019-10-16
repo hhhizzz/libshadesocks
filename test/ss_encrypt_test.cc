@@ -1,7 +1,7 @@
 #include "ss_test.h"
 
 TEST(EncryptTest, HandleStringToHex) {
-  string input = "FFEEDDCCBBAA99887766554433221100";
+  std::string input = "FFEEDDCCBBAA99887766554433221100";
   auto acutal = shadesocks::Util::StringToHex(input);
 
   byte expected[]{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
@@ -15,7 +15,7 @@ TEST(EncryptTest, HandleHexToString) {
   byte bytes[]{0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
                0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
   SecByteBlock input(bytes, sizeof(bytes));
-  string actual = shadesocks::Util::HexToString(input);
+  std::string actual = shadesocks::Util::HexToString(input);
   LOG(INFO) << "the result is " << actual;
   EXPECT_EQ(actual, "FFEEDDCCBBAA99887766554433221100");
 }
@@ -47,11 +47,11 @@ TEST(EncryptTest, HandlePassword) {
   }
 }
 
-void test_encrypt(const string& method) {
+void test_encrypt(const std::string& method) {
   std::unique_ptr<shadesocks::Cipher> cipher =
       shadesocks::Util::getEncryption(method);
 
-  string encoded;
+  std::string encoded;
   SecByteBlock key = cipher->GetKey();
   SecByteBlock iv = cipher->GetIv();
   encoded = shadesocks::Util::HexToString(key);
@@ -73,7 +73,7 @@ void test_encrypt(const string& method) {
   auto decryptData = cipher->decrypt(encryptData);
   LOG(INFO) << "decrypt byte is " << shadesocks::Util::HexToString(decryptData);
   LOG(INFO) << "decrypt text is "
-            << string(reinterpret_cast<char*>(decryptData.data()),
+            << std::string(reinterpret_cast<char*>(decryptData.data()),
                       decryptData.size());
   for (int i = 0; i < decryptData.size(); i++) {
     EXPECT_EQ(plain_text[i], decryptData[i]);
@@ -81,7 +81,7 @@ void test_encrypt(const string& method) {
 }
 
 TEST(EncryptTest, HandleAES) {
-  string method = "aes-128-cfb";
+  std::string method = "aes-128-cfb";
   LOG(INFO) << "start to test method " + method;
   test_encrypt(method);
 
