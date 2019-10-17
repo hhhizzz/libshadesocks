@@ -23,7 +23,8 @@ enum ProxyState {
   ServerReading,
   ClientWriting,
   ClientReading,
-  RequestingAddress,
+  AddressRequesting,
+  Connecting,
 };
 
 class ShadeHandle final {
@@ -38,8 +39,6 @@ class ShadeHandle final {
 
   uv_tcp_t p_handle_in;
   uv_tcp_t p_handle_out;
-
-  bool connected;
 
   std::unique_ptr<sockaddr_in> addr_out;
   std::string hostname_out;
@@ -64,9 +63,6 @@ class ShadeHandle final {
         this->ReadClient();
         break;
       }
-      case RequestingAddress: {
-        //TODO: requesting address
-      }
       case ServerWriting: {
         this->WriteServer();
         break;
@@ -79,6 +75,14 @@ class ShadeHandle final {
         this->WriteClient();
         break;
       }
+      case AddressRequesting: {
+        this->GetRequest();
+        break;
+      }
+      case Connecting: {
+        this->Connect();
+        break;
+      }
     }
   }
 
@@ -88,12 +92,13 @@ class ShadeHandle final {
     }
     auto shade_handle = reinterpret_cast<ShadeHandle*>(req->data);
     DLOG(INFO) << "connected to " << shade_handle->hostname_out << ":" << ntohs(shade_handle->addr_out->sin_port);
-    shade_handle->connected = true;
 
     auto length = shade_handle->length;
     if (length == 0) {
       DLOG(INFO) << "the current data is empty, so wait next data";
+      shade_handle->proxy_state = ProxyState::ClientReading;
     } else {
+      DLOG(INFO) << "the current data length is " << shade_handle->length << ", so write data to server";
       shade_handle->proxy_state = ProxyState::ServerWriting;
       shade_handle->DoNext();
     }
@@ -102,7 +107,6 @@ class ShadeHandle final {
   }
 
   void Connect() {
-    this->connected = true;
     DLOG(INFO) << "start to connect to " << this->hostname_out << ":" << ntohs(this->addr_out->sin_port);
     auto p_connect = new uv_connect_t{};
     p_connect->data = this;
@@ -118,7 +122,6 @@ class ShadeHandle final {
   }
 
   void GetRequest() {
-    DLOG(INFO) << "before parse address, current offset is: " << this->offset;
     auto addr_type = data[0] & 0xf;
     this->offset += 1;
     std::string char_addr;
@@ -148,12 +151,12 @@ class ShadeHandle final {
         addr_out->sin_port = htons(this->port_out);
 
         this->length = this->data.size() - this->offset;
+        this->proxy_state = ProxyState::Connecting;
         if (this->length) {
           uv_read_stop(this->handle_in<uv_stream_t>());
           this->CopyToTemp();
           this->Connect();
         }
-
         break;
       }
       case AddrType::TypeIPv6: {
@@ -181,15 +184,20 @@ class ShadeHandle final {
         this->port_out = data[offset++] << 8;
         this->port_out |= data[offset++];
 
+        this->length = this->data.size() - this->offset;
+        if (this->length) {
+          uv_read_stop(this->handle_in<uv_stream_t>());
+          this->CopyToTemp();
+        }
+
         DLOG(INFO) << "start to look up the address";
-        this->proxy_state = ProxyState::RequestingAddress;
+        this->proxy_state = ProxyState::AddressRequesting;
         uv_getaddrinfo(this->server_handle->loop, req, GetRequestDone, char_addr.data(), nullptr, &hints);
         break;
       }
       default:throw UvException("unknown request");
     }
 
-    DLOG(INFO) << "after parse address, current offset is: " << this->offset;
   }
 
   //send client data to server
@@ -250,9 +258,12 @@ class ShadeHandle final {
     }
 
     //check if current state is right
-    if (nread >= 0 && shade_handle->proxy_state != ProxyState::ClientReading) {
+    //the server might waiting for the request
+    if (nread >= 0 && shade_handle->proxy_state != ProxyState::ClientReading
+        && shade_handle->proxy_state != ProxyState::AddressRequesting
+        && shade_handle->proxy_state != ProxyState::Connecting) {
       LOG(ERROR) << "current state is in: " << shade_handle->proxy_state;
-      throw ProxyException("expect current state ClientReading");
+      throw ProxyException("expect current state ClientReading or Requesting or Connecting");
     }
 
     shade_handle->offset = 0;
@@ -285,7 +296,8 @@ class ShadeHandle final {
         clock_t t2 = clock();
         DLOG(INFO) << "decrypt data use " << (t2 - t1) * 1.0f / CLOCKS_PER_SEC * 1000 << "ms";
 
-        shade_handle->GetRequest();
+        shade_handle->proxy_state = ProxyState::AddressRequesting;
+        shade_handle->DoNext();
       } else {
         clock_t t1 = clock();
 
@@ -298,13 +310,11 @@ class ShadeHandle final {
         uv_read_stop(stream);
 
         shade_handle->CopyToTemp();
-        if (shade_handle->connected) {
+        if (shade_handle->proxy_state == ProxyState::ClientReading) {
+          DLOG(INFO) << "current status is ClientReading, so do next";
           shade_handle->proxy_state = ProxyState::ServerWriting;
           shade_handle->DoNext();
-        } else {
-          shade_handle->Connect();
         }
-
       }
 
     } else if (nread < 0) {
@@ -337,9 +347,9 @@ class ShadeHandle final {
     }
 
     //check if current state is right
-    if (shade_handle->proxy_state != ProxyState::RequestingAddress) {
+    if (shade_handle->proxy_state != ProxyState::AddressRequesting) {
       LOG(ERROR) << "current state is in: " << shade_handle->proxy_state;
-      throw ProxyException("expect current state ServerWriting");
+      throw ProxyException("expect current state AddressRequesting");
     }
 
     memcpy(shade_handle->addr_out.get(), addr_info->ai_addr, sizeof(sockaddr_in));
@@ -348,12 +358,8 @@ class ShadeHandle final {
     freeaddrinfo(addr_info);
     DLOG(INFO) << "got ip address";
 
-    shade_handle->length = shade_handle->data.size() - shade_handle->offset;
-    if (shade_handle->length) {
-      uv_read_stop(shade_handle->handle_in<uv_stream_t>());
-      shade_handle->CopyToTemp();
-      shade_handle->Connect();
-    }
+    shade_handle->proxy_state = ProxyState::Connecting;
+    shade_handle->DoNext();
   }
 
   static void WriteClientDone(uv_write_t* req, int status) {
@@ -400,7 +406,7 @@ class ShadeHandle final {
     if (nread > 0) {
 
       SecByteBlock bytes((byte*) buf->base, nread);
-      DLOG(INFO) << "Got data, length: " << nread;
+      DLOG(INFO) << "Got server data, length: " << nread;
 
       clock_t t1 = clock();
 
